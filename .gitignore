@@ -1,0 +1,14 @@
+.DS_Store
+
+__pycache__/
+*.pyc
+
+dist/
+
+.venv-mypy/
+venv/
+
+.work/
+results/
+
+.idea/
