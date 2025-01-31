@@ -48,7 +48,26 @@ command.
 `"emulator_command = /path/to/emulator {ISO}"`
 
 The command may utilize the following macros:
+
 * `{ISO}` - Replaced with the path to the `nxdk_pgraph_tests.iso` xiso file.
+
+### Example invocation
+
+This is a sample invocation that will run xemu against a previously downloaded
+nxdk_pgraph_tests iso. It will create a `results` directory with the results of
+the tests.
+
+```shell
+nxdk-pgraph-test-runner \
+    --override-ftp-ip 10.0.2.2 \
+    --iso-path ~/nxdk_pgraph_tests_xiso.iso \
+    --emulator-command "/path/to/xemu -dvd_path \"{ISO}\"" \
+    -I lo0
+```
+
+This assumes that xemu is configured to use NAT networking, so the IP reported
+to the pgraph tester is set to the qemu `10.0.2.2` host address and the loopback
+interface (-I `lo0`) is used.
 
 ## License
 
