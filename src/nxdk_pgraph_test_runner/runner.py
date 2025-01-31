@@ -245,11 +245,14 @@ def _run_tests(config: Config, iso_path: str) -> int:
     return _write_results(config, output_path, passed_tests, retry_results)
 
 
-def _prepare_iso(config: Config, ftp_server: FtpServer) -> str:
+def _prepare_iso(config: Config, ftp_server: FtpServer) -> str | None:
     """Prepares a copy of the config ISO configured for the given FTP server."""
     manager = NxdkPgraphTesterConfigManager(config)
     iso_path = os.path.join(config.ensure_data_dir(), _MODIFIED_PGRAPH_TESTER_ISO)
-    manager.repack_iso_fresh(iso_path, ftp_server.address, ftp_server.port, ftp_server.username, ftp_server.password)
+    if not manager.repack_iso_fresh(
+        iso_path, ftp_server.address, ftp_server.port, ftp_server.username, ftp_server.password
+    ):
+        return None
 
     return iso_path
 
@@ -270,6 +273,9 @@ def entrypoint(config: Config) -> int:
     )
 
     iso_path = _prepare_iso(config, ftp_server)
+    if not iso_path:
+        logger.error("Failed to prepare ISO for testing")
+        return 1
 
     try:
         ftp_server.start()

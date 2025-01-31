@@ -45,7 +45,6 @@ class Config:
         self._provided_work_dir: str | None
         self._work_dir: str
         self._data_dir: str
-        self._mount_dir: str
 
         self._provided_output_dir: str | None
         self._output_dir: str
@@ -63,15 +62,10 @@ class Config:
         self._provided_work_dir = work_dir
         self._work_dir = work_dir if work_dir else os.path.abspath(".work")
         self._data_dir = os.path.join(self._work_dir, "data")
-        self._mount_dir = os.path.join(self._work_dir, "docker_mount")
 
     def set_output_dir(self, output_dir: str | None):
         self._provided_output_dir = output_dir
         self._output_dir = output_dir if output_dir else os.path.abspath("results")
-
-    def ensure_mount_dir(self) -> str:
-        os.makedirs(self._mount_dir, exist_ok=True)
-        return self._mount_dir
 
     def ensure_data_dir(self) -> str:
         os.makedirs(self._data_dir, exist_ok=True)
