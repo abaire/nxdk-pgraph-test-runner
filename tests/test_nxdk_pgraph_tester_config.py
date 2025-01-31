@@ -6,12 +6,10 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from nxdk_pgraph_test_runner._config import Config
-from nxdk_pgraph_test_runner._nxdk_pgraph_tester_config import NxdkPgraphTesterConfigManager, create_skip_config
+from nxdk_pgraph_test_runner._nxdk_pgraph_tester_config import create_skip_config
 
 
 @pytest.fixture
@@ -21,12 +19,6 @@ def config(tmp_path) -> Config:
         print("test", file=outfile)
 
     return Config(emulator_command="foo bar", iso_path=iso_path)
-
-
-def test__NxdkPgraphTesterConfigManager__extracts_iso_filename(config):
-    sut = NxdkPgraphTesterConfigManager(config)
-
-    assert sut.iso_filename == os.path.basename(config.iso_path)
 
 
 def test__create_skip_config__with_empty_list():

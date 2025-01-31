@@ -23,7 +23,6 @@ able to detect and recover from crashes.
 
 ### Prerequisites
 
-* Docker - required
 * An xbox emulator (e.g., [xemu](https://xemu.app)) - required
 
 ### pip installation
