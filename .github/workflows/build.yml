@@ -16,8 +16,21 @@ on:
     types: [ published ]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
-  build:
+  select-python-version-for-publishing:
+    runs-on: ubuntu-latest
+    outputs:
+      python-version: ${{ steps.select-version.outputs.version }}
+    steps:
+      - id: select-version
+        run: echo "version=3.11" >> $GITHUB_OUTPUT
+
+  Build:
+    needs: [ select-python-version-for-publishing ]
     name: Build source and wheel distributions
     runs-on: ubuntu-latest
 
@@ -51,33 +64,33 @@ jobs:
 
       - name: Upload sdist artifact
         uses: actions/upload-artifact@v4
+        if: matrix.python-version == needs.select-python-version-for-publishing.outputs.python-version
         with:
-          name: source-${{ matrix.python-version }}
+          name: source
           path: dist/*.tar.gz
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
+        if: matrix.python-version == needs.select-python-version-for-publishing.outputs.python-version
         with:
-          name: wheel-${{ matrix.python-version }}
+          name: wheels
           path: dist/*.whl
 
-  upload:
-    name: Upload distribution to PyPi
+  Publish:
+    needs: [ Build, select-python-version-for-publishing ]
+    name: Publish distribution to PyPi
     runs-on: ubuntu-latest
-    needs: build
     if: github.event_name == 'release'
 
     steps:
-      - name: Download source artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: source-3.8
+          name: source
           path: dist
 
-      - name: Download wheel artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: wheel-3.8
+          name: wheels
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
