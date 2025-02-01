@@ -12,7 +12,7 @@ from typing import Any
 
 import tomli_w
 
-from nxdk_pgraph_test_runner._host_profile import HostProfile
+from nxdk_pgraph_test_runner.host_profile import HostProfile
 
 logger = logging.getLogger(__name__)
 

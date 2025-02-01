@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import datetime
 import json
 import logging
 import os
@@ -15,15 +14,15 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from nxdk_pgraph_test_runner._emulator_output import EmulatorOutput
 from nxdk_pgraph_test_runner._ftp_server import FtpServer
 from nxdk_pgraph_test_runner._nxdk_pgraph_tester_config import NxdkPgraphTesterConfigManager
 from nxdk_pgraph_test_runner._nxdk_pgraph_tester_progress_log import NxdkPgraphTesterProgressLog
+from nxdk_pgraph_test_runner.emulator_output import EmulatorOutput
 
 if TYPE_CHECKING:
     from nxdk_pgraph_test_runner._config import Config
-    from nxdk_pgraph_test_runner._host_profile import HostProfile
     from nxdk_pgraph_test_runner._nxdk_pgraph_tester_test_output import NxdkPgraphTesterTestOutput
+    from nxdk_pgraph_test_runner.host_profile import HostProfile
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +165,8 @@ def _write_results(
     return 1
 
 
-def _get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
+def get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
+    """Returns a directory hierarchy suitable for the information in the given HostProfile."""
     components = [
         f"{host_profile.os_name}_{host_profile.cpu_model}",
         f"gl_{host_profile.gl_vendor}_{host_profile.gl_renderer}",
@@ -176,13 +176,20 @@ def _get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
     return os.path.join(*components)
 
 
-def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
-    output_dir = os.path.join(config.ensure_output_dir(), _get_output_dir_for_host_profile(config.host_profile))
-
+def get_output_directory(emulator_version_info: str, host_profile: HostProfile) -> str:
+    """Returns a directory hierarchy suitable for the given emulator version and HostProfile."""
+    output_dir = get_output_dir_for_host_profile(host_profile)
     if emulator_version_info:
         output_dir = os.path.join(output_dir, emulator_version_info)
     else:
-        output_dir = os.path.join(output_dir, datetime.datetime.now(datetime.UTC).isoformat())
+        output_dir = os.path.join(output_dir, "unknown_emulator")
+    return output_dir
+
+
+def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
+    output_dir = os.path.join(
+        config.ensure_output_dir(), get_output_directory(emulator_version_info, config.host_profile)
+    )
 
     shutil.rmtree(output_dir, ignore_errors=True)
     os.makedirs(output_dir, exist_ok=True)
