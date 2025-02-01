@@ -28,7 +28,7 @@ def run():
     parser.add_argument(
         "--emulator-commandline",
         help=(
-            "String used to launch the Xbox emulator. A `${ISO}` parameter will be replaced with the path to the "
+            "String used to launch the Xbox emulator. A `{ISO}` parameter will be replaced with the path to the "
             "tester xiso."
         ),
     )
@@ -95,7 +95,7 @@ def run():
     if args.emulator_commandline:
         config.set_emulator_command(args.emulator_commandline)
     if args.iso_path:
-        config.iso_path = args.iso_path
+        config.iso_path = os.path.expanduser(args.iso_path)
     if args.ftp_ip:
         config.ftp_ip = args.ftp_ip
     if args.ftp_interface:

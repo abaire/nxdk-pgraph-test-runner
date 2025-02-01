@@ -33,7 +33,7 @@ class Config:
         xbox_artifact_path: str = "e:\nxdk_pgraph_tests",
         test_failure_retries: int = 1,
     ) -> None:
-        self._emulator_command: str = emulator_command if emulator_command is not None else "xemu -dvd_path {ISO}"
+        self._emulator_command: str = emulator_command or ""
         self.iso_path: str = str(iso_path) if iso_path is not None else ""
         self.ftp_ip: str | None = ftp_ip
         self.ftp_preferred_interface: str | None = ftp_preferred_interface
@@ -53,6 +53,9 @@ class Config:
         self.set_output_dir(output_dir)
 
     def build_emulator_command(self, iso_path: str) -> list[str]:
+        if not self._emulator_command:
+            msg = "Emulator command was not provided."
+            raise ValueError(msg)
         return shlex.split(self._emulator_command.replace("{ISO}", iso_path))
 
     def set_emulator_command(self, template: str):

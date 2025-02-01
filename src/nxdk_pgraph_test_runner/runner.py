@@ -32,7 +32,10 @@ _MODIFIED_PGRAPH_TESTER_ISO = "updated_pgraph_tester_iso.iso"
 
 def validate_config(config: Config) -> list[str]:
     ret = []
-    if not config.build_emulator_command(""):
+
+    try:
+        config.build_emulator_command("")
+    except ValueError:
         ret.append("Missing command to launch the emulator")
     if not config.iso_path:
         ret.append("Missing path to iso")
@@ -41,9 +44,14 @@ def validate_config(config: Config) -> list[str]:
 
 
 def _execute_emulator(emulator_command: list[str], config: Config) -> tuple[int, list[str], list[str]]:
-    results = subprocess.run(
-        emulator_command, capture_output=True, text=True, timeout=config.timeout_seconds, check=False
-    )
+    try:
+        results = subprocess.run(
+            emulator_command, capture_output=True, text=True, timeout=config.timeout_seconds, check=False
+        )
+    except FileNotFoundError:
+        logger.exception("Failed to execute emulator")
+        return 255, [], [f"Failed to execute command {emulator_command}"]
+
     return results.returncode, results.stdout.split("\n"), results.stderr.split("\n")
 
 
@@ -95,7 +103,7 @@ def _retry_failed_tests(
                 retry_results.errors.append("Timeout")
                 break
 
-            status, run_info, progress_log = results
+            status, run_info, progress_log, _stderr = results
             if not status:
                 retry_results = retry_results.with_success_result(progress_log.completed_tests.pop())
                 break
@@ -176,10 +184,10 @@ def _prepare_output_path(config: Config, emulator_version_info: str, machine_inf
 
 def _execute_emulator_and_parse_results(
     emulator_command: list[str], config: Config
-) -> tuple[int, EmulatorOutput] | None:
+) -> tuple[int, EmulatorOutput, list[str]] | None:
     try:
         status, stdout, stderr = _execute_emulator(emulator_command, config)
-        return status, EmulatorOutput.parse(stdout, stderr)
+        return status, EmulatorOutput.parse(stdout, stderr), stderr
 
     except subprocess.TimeoutExpired:
         logger.error("Timeout exceeded running %s.", emulator_command)  # noqa: TRY400 Use `logging.exception`
@@ -188,19 +196,19 @@ def _execute_emulator_and_parse_results(
 
 def _execute_emulator_and_parse_progress_log(
     emulator_command: list[str], config: Config
-) -> tuple[int, EmulatorOutput, NxdkPgraphTesterProgressLog] | None:
+) -> tuple[int, EmulatorOutput, NxdkPgraphTesterProgressLog, list[str]] | None:
     results = _execute_emulator_and_parse_results(emulator_command, config)
     if not results:
         return None
 
-    status, run_info = results
+    status, run_info, stderr = results
 
     data_dir = config.ensure_data_dir()
     progress_log = NxdkPgraphTesterProgressLog(
         os.path.join(config.ensure_data_dir(), "nxdk_pgraph_tests_progress.log"), data_dir
     )
 
-    return status, run_info, progress_log
+    return status, run_info, progress_log, stderr
 
 
 def _run_tests(config: Config, iso_path: str) -> int:
@@ -217,7 +225,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
         if not results:
             return 255
 
-        status, run_info, progress_log = results
+        status, run_info, progress_log, stderr = results
 
         passed_tests.extend(progress_log.completed_tests)
 
@@ -226,7 +234,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
             break
 
         if not progress_log.last_failed_test:
-            logger.error("Emulator exited with code %d but progress log does not indicate a crash", status)
+            logger.error("Emulator exited with code %d but progress log does not indicate a crash\n%s", status, stderr)
             return 1
 
         failed_tests[progress_log.last_failed_test] = run_info.failure_info
@@ -290,3 +298,4 @@ def entrypoint(config: Config) -> int:
 
     finally:
         ftp_server.stop()
+        ftp_server.join(timeout=2.0)
