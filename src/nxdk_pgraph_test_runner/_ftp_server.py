@@ -25,7 +25,7 @@ class FtpServer(Thread):
         ftp_ip: str | None = None,
         ftp_interface: str | None = None,
     ) -> None:
-        super().__init__(name="FtpServerThread")
+        super().__init__(name="FtpServerThread", daemon=True)
 
         if not ftp_ip:
             ftp_ip = _select_ip_address(ftp_interface)
@@ -77,8 +77,8 @@ class FtpServer(Thread):
         if not self._server_running:
             return
         self._server_running = False
+        self._server.close()
         self._server.close_all()
-        self.join()
 
 
 def _get_ip_addresses() -> list[ifaddr.IP]:

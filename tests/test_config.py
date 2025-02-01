@@ -4,13 +4,16 @@
 
 from __future__ import annotations
 
+import pytest
+
 from nxdk_pgraph_test_runner._config import Config
 
 
 def test_loads_empty():
     sut = Config.loads("")
 
-    assert sut.build_emulator_command("foo_bar") == ["xemu", "-dvd_path", "foo_bar"]
+    with pytest.raises(ValueError, match="Emulator command was not provided."):
+        sut.build_emulator_command("foo_bar")
 
 
 def test_loads():
