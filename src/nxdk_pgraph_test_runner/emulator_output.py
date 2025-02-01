@@ -24,6 +24,7 @@ class EmulatorOutput:
 
     @classmethod
     def parse(cls, stdout: list[str], stderr: list[str]) -> EmulatorOutput:
+        """Extracts information from the stdout and stderr from running an emulator."""
         return cls(*parse_emulator_info(stdout, stderr))
 
 

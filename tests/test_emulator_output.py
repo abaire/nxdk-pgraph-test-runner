@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from nxdk_pgraph_test_runner._emulator_output import parse_emulator_info
+from nxdk_pgraph_test_runner.emulator_output import parse_emulator_info
 
 _XEMU_STDERR = [
     "xemu_version: 0.8.10",
