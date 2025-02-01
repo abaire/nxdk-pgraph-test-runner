@@ -22,6 +22,7 @@ from nxdk_pgraph_test_runner._nxdk_pgraph_tester_progress_log import NxdkPgraphT
 
 if TYPE_CHECKING:
     from nxdk_pgraph_test_runner._config import Config
+    from nxdk_pgraph_test_runner._host_profile import HostProfile
     from nxdk_pgraph_test_runner._nxdk_pgraph_tester_test_output import NxdkPgraphTesterTestOutput
 
 logger = logging.getLogger(__name__)
@@ -165,8 +166,18 @@ def _write_results(
     return 1
 
 
+def _get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
+    components = [
+        f"{host_profile.os_name}_{host_profile.cpu_model}",
+        f"gl_{host_profile.gl_vendor}_{host_profile.gl_renderer}",
+        f"gslv_{host_profile.gl_shading_language_version}",
+    ]
+
+    return os.path.join(*components)
+
+
 def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
-    output_dir = config.ensure_output_dir()
+    output_dir = os.path.join(config.ensure_output_dir(), _get_output_dir_for_host_profile(config.host_profile))
 
     if emulator_version_info:
         output_dir = os.path.join(output_dir, emulator_version_info)
@@ -174,7 +185,7 @@ def _prepare_output_path(config: Config, emulator_version_info: str, machine_inf
         output_dir = os.path.join(output_dir, datetime.datetime.now(datetime.UTC).isoformat())
 
     shutil.rmtree(output_dir, ignore_errors=True)
-    os.makedirs(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
     with open(os.path.join(output_dir, "machine_info.txt"), "w") as machine_info_file:
         machine_info_file.write(machine_info)
