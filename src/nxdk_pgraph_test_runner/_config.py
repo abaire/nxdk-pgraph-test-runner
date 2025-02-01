@@ -12,6 +12,8 @@ from typing import Any
 
 import tomli_w
 
+from nxdk_pgraph_test_runner._host_profile import HostProfile
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +53,8 @@ class Config:
 
         self.set_work_dir(work_dir)
         self.set_output_dir(output_dir)
+
+        self.host_profile = HostProfile()
 
     def build_emulator_command(self, iso_path: str) -> list[str]:
         if not self._emulator_command:
