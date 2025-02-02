@@ -16,7 +16,7 @@ from nxdk_pgraph_test_repacker import ensure_extract_xiso, extract_config, repac
 if TYPE_CHECKING:
     from collections.abc import Collection
 
-    from nxdk_pgraph_test_runner._config import Config
+    from nxdk_pgraph_test_runner.config import Config
 
 logger = logging.getLogger(__name__)
 
