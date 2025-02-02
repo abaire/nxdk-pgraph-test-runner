@@ -47,7 +47,12 @@ def get_opengl_info() -> dict[str, str]:
         logger.error("Failed to initialize OpenGL")
         return ret
 
-    glfw.window_hint(glfw.VISIBLE, glfw.FALSE)  # Make it invisible
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 0)
+    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
+
+    glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
     window = glfw.create_window(1, 1, "pgraph-test-runner-host-profile", None, None)  # Small size is enough
     if not window:
         logger.error("Failed to initialize OpenGL - failed to create window")
