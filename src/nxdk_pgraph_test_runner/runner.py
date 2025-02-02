@@ -20,8 +20,8 @@ from nxdk_pgraph_test_runner._nxdk_pgraph_tester_progress_log import NxdkPgraphT
 from nxdk_pgraph_test_runner.emulator_output import EmulatorOutput
 
 if TYPE_CHECKING:
-    from nxdk_pgraph_test_runner._config import Config
     from nxdk_pgraph_test_runner._nxdk_pgraph_tester_test_output import NxdkPgraphTesterTestOutput
+    from nxdk_pgraph_test_runner.config import Config
     from nxdk_pgraph_test_runner.host_profile import HostProfile
 
 logger = logging.getLogger(__name__)

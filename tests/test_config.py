@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from nxdk_pgraph_test_runner._config import Config
+from nxdk_pgraph_test_runner.config import Config
 
 
 def test_loads_empty():

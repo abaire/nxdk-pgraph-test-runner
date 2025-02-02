@@ -35,6 +35,23 @@ class Config:
         xbox_artifact_path: str = "e:\nxdk_pgraph_tests",
         test_failure_retries: int = 1,
     ) -> None:
+        """Initializes this config.
+
+        work_dir - Used for temporary files.
+        output_dir - Final results will be copied into a subdirectory within this directory.
+        emulator_command - Commandline used to launch the emulator.
+        iso_path - Path to the nxdk_pgraph_tests xiso.
+        ftp_ip - IP of the interface to bind the FTP server to. Must be accessible by the emulator.
+                 May be used instead of ftp_preferred_interface.
+        ftp_preferred_interface - Name of the interface to bind the FTP server to. Must be accessible by the emulator.
+                                  May be used instead of ftp_ip.
+        ftp_ip_override - Optional IP address to report to nxdk_pgraph_tests. Generally used to facilitate NAT addressing
+                          (e.g., qemu 10.0.2.2 = "host").
+        timeout_seconds - Maximum time that the nxdk_pgraph_tests will be allowed to run before being forcibly killed.
+        xbox_artifact_path - Path within the emulated Xbox into which nxdk_pgraph_tests results will be written.
+        test_failure_retries - The number of times to retry tests that crash the emulator before considering them
+                               permanently failed.
+        """
         self._emulator_command: str = emulator_command or ""
         self.iso_path: str = str(iso_path) if iso_path is not None else ""
         self.ftp_ip: str | None = ftp_ip

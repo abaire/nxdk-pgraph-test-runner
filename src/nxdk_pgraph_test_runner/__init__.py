@@ -13,7 +13,7 @@ import sys
 
 from platformdirs import user_config_dir
 
-from nxdk_pgraph_test_runner._config import Config
+from nxdk_pgraph_test_runner.config import Config
 from nxdk_pgraph_test_runner.runner import entrypoint
 
 logger = logging.getLogger(__name__)
