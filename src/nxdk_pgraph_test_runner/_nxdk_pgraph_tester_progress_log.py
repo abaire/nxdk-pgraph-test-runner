@@ -15,9 +15,16 @@ from nxdk_pgraph_test_runner._nxdk_pgraph_tester_test_output import NxdkPgraphTe
 
 logger = logging.getLogger(__name__)
 
-_START_MESSAGE = re.compile(r'^Starting "([^"]+)"\s*$')
+# START: "Lighting normals::Nz_-100-inlinearrays"
+# - OUTPUT: "Lighting normals::Nz_-100-inlinearrays.png"
+# - MISSING: "Lighting normals::Nz_-100-inlinearrays.png"
+# END: "Lighting normals::Nz_-100-inlinearrays" IN 99 MS
+
+_START_MESSAGE = re.compile(r'^START: "([^"]+)"\s*$')
+_ARTIFACT_MESSAGE = re.compile(r'^-\s+OUTPUT: "([^"]+)"\s*$')
+_MISSING_ARTIFACT_MESSAGE = re.compile(r'^-\s+MISSING: "([^"]+)"\s*$')
 # TODO: Fix the nxdk_pgraph_tests error that allows the duration to be negative.
-_COMPLETE_MESSAGE = re.compile(r'^Completed "([^"]+)" in -?(\d+) ms\s*$')
+_COMPLETE_MESSAGE = re.compile(r'^END: "([^"]+)" IN -?(\d+) MS\s*$')
 
 
 class NxdkPgraphTesterProgressLog:
@@ -56,11 +63,25 @@ def _parse_log(progress_file: TextIO, artifact_dir: str) -> tuple[list[NxdkPgrap
 
     completed_tests: list[NxdkPgraphTesterTestOutput] = []
     last_started_test: str | None = None
+    artifacts: list[str] = []
+    missing: list[str] = []
 
     for line in progress_file:
         match = _START_MESSAGE.match(line)
         if match:
+            artifacts.clear()
+            missing.clear()
             last_started_test = match.group(1)
+            continue
+
+        match = _ARTIFACT_MESSAGE.match(line)
+        if match:
+            artifacts.append(match.group(1))
+            continue
+
+        match = _MISSING_ARTIFACT_MESSAGE.match(line)
+        if match:
+            missing.append(match.group(1))
             continue
 
         match = _COMPLETE_MESSAGE.match(line)
@@ -74,7 +95,9 @@ def _parse_log(progress_file: TextIO, artifact_dir: str) -> tuple[list[NxdkPgrap
 
             last_started_test = None
             completed_tests.append(
-                NxdkPgraphTesterTestOutput.create(completed_test, duration_milliseconds, artifact_dir)
+                NxdkPgraphTesterTestOutput.create(
+                    completed_test, duration_milliseconds, artifact_dir, artifacts, missing
+                )
             )
             continue
 

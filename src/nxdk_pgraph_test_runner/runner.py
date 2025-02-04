@@ -240,7 +240,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
     passed_tests: list[NxdkPgraphTesterTestOutput] = []
     failed_tests: dict[str, str] = {}
 
-    consecutive_segfauls = 0
+    consecutive_segfaults = 0
     while True:
         results = _execute_emulator_and_parse_progress_log(emulator_command, config)
         if not results:
@@ -256,12 +256,12 @@ def _run_tests(config: Config, iso_path: str) -> int:
 
         if not progress_log.last_failed_test:
             if status == signal.SIGSEGV:
-                consecutive_segfauls += 1
-                if consecutive_segfauls > _MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION:
+                consecutive_segfaults += 1
+                if consecutive_segfaults > _MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION:
                     logger.error(
                         "Emulator exited with %d (SEGFAULT) %d times where progress log does not indicate a specific test crash\n%s",
                         status,
-                        consecutive_segfauls,
+                        consecutive_segfaults,
                         stderr,
                     )
             else:
