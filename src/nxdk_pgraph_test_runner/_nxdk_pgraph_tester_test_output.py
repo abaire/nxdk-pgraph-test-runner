@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-import glob
+import os
 from typing import Any, NamedTuple
 
 
@@ -17,9 +17,17 @@ class NxdkPgraphTesterTestOutput(NamedTuple):
     name: str
     duration_milliseconds: int
     artifacts: list[str]
+    missing_artifacts: list[str]
 
     @classmethod
-    def create(cls, full_test_name: str, duration_milliseconds: int, artifact_dir: str):
+    def create(
+        cls,
+        full_test_name: str,
+        duration_milliseconds: int,
+        artifact_dir: str,
+        artifacts: list[str],
+        missing: list[str],
+    ):
         components = full_test_name.split("::")
         if len(components) != 2:
             msg = f"Invalid fully qualified test name '{full_test_name}'"
@@ -31,7 +39,8 @@ class NxdkPgraphTesterTestOutput(NamedTuple):
             suite=suite,
             name=name,
             duration_milliseconds=duration_milliseconds,
-            artifacts=_find_artifacts(artifact_dir, full_test_name),
+            artifacts=[os.path.join(artifact_dir, artifact) for artifact in artifacts],
+            missing_artifacts=missing,
         )
 
     @property
@@ -45,9 +54,3 @@ class NxdkPgraphTesterTestOutput(NamedTuple):
             "duration_milliseconds": self.duration_milliseconds,
             "artifacts": self.artifacts,
         }
-
-
-def _find_artifacts(artifact_dir: str, prefix: str) -> list[str]:
-    primary_artifacts = glob.glob(prefix + ".png", root_dir=artifact_dir)
-    z_buffer_artifacts = glob.glob(prefix + "_ZB.png", root_dir=artifact_dir)
-    return primary_artifacts + z_buffer_artifacts
