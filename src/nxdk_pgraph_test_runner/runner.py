@@ -180,12 +180,8 @@ def get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
 
 def get_output_directory(emulator_version_info: str, host_profile: HostProfile) -> str:
     """Returns a directory hierarchy suitable for the given emulator version and HostProfile."""
-    output_dir = get_output_dir_for_host_profile(host_profile)
-    if emulator_version_info:
-        output_dir = os.path.join(output_dir, emulator_version_info)
-    else:
-        output_dir = os.path.join(output_dir, "unknown_emulator")
-    return output_dir
+    output_dir = emulator_version_info if emulator_version_info else "__unknown_emulator__"
+    return os.path.join(output_dir, get_output_dir_for_host_profile(host_profile))
 
 
 def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
