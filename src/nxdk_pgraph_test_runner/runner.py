@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import time
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 _RESULT_MANIFEST_FILENAME = "results.json"
 _MODIFIED_PGRAPH_TESTER_ISO = "updated_pgraph_tester_iso.iso"
+_MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION = 5
 
 
 def validate_config(config: Config) -> list[str]:
@@ -173,7 +175,7 @@ def get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
         f"gslv_{host_profile.gl_shading_language_version}",
     ]
 
-    return os.path.join(*components)
+    return os.path.join(*components).replace(" ", "_")
 
 
 def get_output_directory(emulator_version_info: str, host_profile: HostProfile) -> str:
@@ -238,6 +240,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
     passed_tests: list[NxdkPgraphTesterTestOutput] = []
     failed_tests: dict[str, str] = {}
 
+    consecutive_segfauls = 0
     while True:
         results = _execute_emulator_and_parse_progress_log(emulator_command, config)
         if not results:
@@ -252,10 +255,23 @@ def _run_tests(config: Config, iso_path: str) -> int:
             break
 
         if not progress_log.last_failed_test:
-            logger.error("Emulator exited with code %d but progress log does not indicate a crash\n%s", status, stderr)
-            return 1
+            if status == signal.SIGSEGV:
+                consecutive_segfauls += 1
+                if consecutive_segfauls > _MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION:
+                    logger.error(
+                        "Emulator exited with %d (SEGFAULT) %d times where progress log does not indicate a specific test crash\n%s",
+                        status,
+                        consecutive_segfauls,
+                        stderr,
+                    )
+            else:
+                logger.error(
+                    "Emulator exited with code %d but progress log does not indicate a test crash\n%s", status, stderr
+                )
+                return 1
 
-        failed_tests[progress_log.last_failed_test] = run_info.failure_info
+        if progress_log.last_failed_test:
+            failed_tests[progress_log.last_failed_test] = run_info.failure_info
 
         if not manager.repack_with_additional_tests_disabled(
             progress_log.completed_and_failed_fully_qualified_test_names

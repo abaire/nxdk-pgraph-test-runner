@@ -128,6 +128,19 @@ class NxdkPgraphTesterConfigManager:
 
         return self._repack_config(tester_config, output_path=self.iso_path)
 
+    def repack_with_only_test_suites(self, suites_to_enable: Collection[str]) -> bool:
+        """Repacks the ISO with the given fully qualified test name."""
+        tester_config = self.extract_pgraph_tester_config()
+        if not tester_config:
+            msg = "Failed to extract existing nxdk_pgraph_tests config."
+            raise ValueError(msg)
+
+        if "settings" in tester_config:
+            tester_config["settings"]["skip_tests_by_default"] = True
+        tester_config["test_suites"] = {suite: {"skipped": False} for suite in suites_to_enable}
+
+        return self._repack_config(tester_config, output_path=self.iso_path)
+
     def _repack_config(self, tester_config: dict[str, Any], output_path: str) -> bool:
         """Repacks the source ISO with the given nxdk_pgraph_tests config data."""
 
