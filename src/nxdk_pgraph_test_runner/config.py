@@ -34,6 +34,7 @@ class Config:
         timeout_seconds: int = 0,
         xbox_artifact_path: str = "e:\nxdk_pgraph_tests",
         test_failure_retries: int = 1,
+        max_consecutive_errors_before_termination: int = 4,
     ) -> None:
         """Initializes this config.
 
@@ -51,6 +52,8 @@ class Config:
         xbox_artifact_path - Path within the emulated Xbox into which nxdk_pgraph_tests results will be written.
         test_failure_retries - The number of times to retry tests that crash the emulator before considering them
                                permanently failed.
+        max_consecutive_errors_before_termination - Maximum number of times the emulator can exit without an obvious
+                                                    test failure before everything is aborted.
         """
         self._emulator_command: str = emulator_command or ""
         self.iso_path: str = str(iso_path) if iso_path is not None else ""
@@ -60,6 +63,7 @@ class Config:
         self.timeout_seconds = timeout_seconds if timeout_seconds else self._DEFAULT_TIMEOUT_SECONDS
         self.xbox_artifact_path = xbox_artifact_path
         self.test_failure_retries = test_failure_retries
+        self.max_consecutive_errors_before_termination = max_consecutive_errors_before_termination
 
         self._provided_work_dir: str | None
         self._work_dir: str
