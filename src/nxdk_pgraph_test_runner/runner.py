@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 _RESULT_MANIFEST_FILENAME = "results.json"
 _MODIFIED_PGRAPH_TESTER_ISO = "updated_pgraph_tester_iso.iso"
-_MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION = 5
+_TIMEOUT_STATUS = 10000
 
 
 def validate_config(config: Config) -> list[str]:
@@ -203,11 +203,14 @@ def _execute_emulator_and_parse_results(
 ) -> tuple[int, EmulatorOutput, list[str]] | None:
     try:
         status, stdout, stderr = _execute_emulator(emulator_command, config)
-        return status, EmulatorOutput.parse(stdout, stderr), stderr
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as err:
         logger.error("Timeout exceeded running %s.", emulator_command)  # noqa: TRY400 Use `logging.exception`
-        return None
+        status = _TIMEOUT_STATUS
+        stdout = err.stdout.decode().split("\n") if err.stdout else []
+        stderr = err.stderr.decode().split("\n") if err.stderr else []
+
+    return status, EmulatorOutput.parse(stdout, stderr), stderr
 
 
 def _execute_emulator_and_parse_progress_log(
@@ -236,7 +239,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
     passed_tests: list[NxdkPgraphTesterTestOutput] = []
     failed_tests: dict[str, str] = {}
 
-    consecutive_segfaults = 0
+    consecutive_retriable_errors = 0
     while True:
         results = _execute_emulator_and_parse_progress_log(emulator_command, config)
         if not results:
@@ -252,12 +255,20 @@ def _run_tests(config: Config, iso_path: str) -> int:
 
         if not progress_log.last_failed_test:
             if status == signal.SIGSEGV:
-                consecutive_segfaults += 1
-                if consecutive_segfaults > _MAX_CONSECUTIVE_SEGFAULTS_BEFORE_TERMINATION:
+                consecutive_retriable_errors += 1
+                if consecutive_retriable_errors > config.max_consecutive_errors_before_termination:
                     logger.error(
                         "Emulator exited with %d (SEGFAULT) %d times where progress log does not indicate a specific test crash\n%s",
                         status,
-                        consecutive_segfaults,
+                        consecutive_retriable_errors,
+                        stderr,
+                    )
+            elif status == _TIMEOUT_STATUS:
+                consecutive_retriable_errors += 1
+                if consecutive_retriable_errors > config.max_consecutive_errors_before_termination:
+                    logger.error(
+                        "Emulator exited due to timeout %d times where progress log does not indicate a specific test crash\n%s",
+                        consecutive_retriable_errors,
                         stderr,
                     )
             else:

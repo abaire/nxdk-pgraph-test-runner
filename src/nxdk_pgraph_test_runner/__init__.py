@@ -82,6 +82,12 @@ def run():
         help="Number of times to retry failed tests before considering them permanently failed",
         type=int,
     )
+    parser.add_argument(
+        "--max-consecutive-errors",
+        default=5,
+        help="Maximum number of emulator crashes without a clear cause before the run is aborted.",
+        type=int,
+    )
     args = parser.parse_args()
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -110,6 +116,7 @@ def run():
         config.set_output_dir = args.output_dir
     config.test_failure_retries = args.test_failure_retries
     config.xbox_artifact_path = args.xbox_artifact_path
+    config.max_consecutive_errors_before_termination = args.max_consecutive_errors
 
     if not args.no_save_config:
         logger.debug("Updating config file at %s", args.config)
