@@ -153,7 +153,7 @@ def _write_results(
                 missing_artifacts.append(artifact)
                 continue
 
-            artifact_destination = os.path.join(output_path, test_output.suite)
+            artifact_destination = os.path.join(output_path, test_output.suite.replace(" ", "_"))
             os.makedirs(artifact_destination, exist_ok=True)
 
             shutil.move(artifact_path, os.path.join(artifact_destination, artifact.split("::")[1]))
