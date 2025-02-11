@@ -62,10 +62,12 @@ def get_opengl_info() -> dict[str, str]:
     try:
         glfw.make_context_current(window)
 
-        ret["vendor"] = GL.glGetString(GL.GL_VENDOR).decode("utf-8")
-        ret["renderer"] = GL.glGetString(GL.GL_RENDERER).decode("utf-8")
-        ret["version"] = GL.glGetString(GL.GL_VERSION).decode("utf-8")
-        ret["shading_language_version"] = GL.glGetString(GL.GL_SHADING_LANGUAGE_VERSION).decode("utf-8")
+        ret["vendor"] = GL.glGetString(GL.GL_VENDOR).decode("utf-8").replace("/", "-")
+        ret["renderer"] = GL.glGetString(GL.GL_RENDERER).decode("utf-8").replace("/", "-")
+        ret["version"] = GL.glGetString(GL.GL_VERSION).decode("utf-8").replace("/", "-")
+        ret["shading_language_version"] = (
+            GL.glGetString(GL.GL_SHADING_LANGUAGE_VERSION).decode("utf-8").replace("/", "-")
+        )
 
     except Exception:
         logger.exception("Failed to retrieve OpenGL info")
