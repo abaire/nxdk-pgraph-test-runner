@@ -110,6 +110,7 @@ class NxdkPgraphTesterConfigManager:
             raise ValueError(msg)
 
         skip_config = create_skip_config(names_to_disable)
+        logger.debug("Repacking with additional skipped tests %s", skip_config)
         mergedeep.merge(tester_config, skip_config)
 
         return self._repack_config(tester_config, output_path=self.iso_path)
@@ -161,6 +162,7 @@ class NxdkPgraphTesterConfigManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = os.path.join(tmpdir, "updated-config.json")
             with open(config_path, "w", encoding="utf-8") as outfile:
+                logger.debug("Repacking with config content\n%s\n", tester_config)
                 json.dump(tester_config, outfile, ensure_ascii=True, indent=2, sort_keys=True)
 
             if not repack_config(self.iso_path, output_path, config_path, extract_xiso):
