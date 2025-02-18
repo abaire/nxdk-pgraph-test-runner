@@ -166,26 +166,30 @@ def _write_results(
     return 1
 
 
-def get_output_dir_for_host_profile(host_profile: HostProfile) -> str:
+def get_output_dir_for_host_profile(host_profile: HostProfile, *, is_vulkan: bool = False) -> str:
     """Returns a directory hierarchy suitable for the information in the given HostProfile."""
+
+    gl_info_prefix = "vk" if is_vulkan else "gl"
+
     components = [
         f"{host_profile.os_name}_{host_profile.cpu_model}",
-        f"gl_{host_profile.gl_vendor}_{host_profile.gl_renderer}",
+        f"{gl_info_prefix}_{host_profile.gl_vendor}_{host_profile.gl_renderer}",
         f"gslv_{host_profile.gl_shading_language_version}",
     ]
 
     return os.path.join(*components).replace(" ", "_")
 
 
-def get_output_directory(emulator_version_info: str, host_profile: HostProfile) -> str:
+def get_output_directory(emulator_version_info: str, host_profile: HostProfile, *, is_vulkan: bool = False) -> str:
     """Returns a directory hierarchy suitable for the given emulator version and HostProfile."""
     output_dir = emulator_version_info if emulator_version_info else "__unknown_emulator__"
-    return os.path.join(output_dir, get_output_dir_for_host_profile(host_profile))
+    return os.path.join(output_dir, get_output_dir_for_host_profile(host_profile, is_vulkan=is_vulkan))
 
 
 def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
     output_dir = os.path.join(
-        config.ensure_output_dir(), get_output_directory(emulator_version_info, config.host_profile)
+        config.ensure_output_dir(),
+        get_output_directory(emulator_version_info, config.host_profile, is_vulkan="\n- VK_" in machine_info),
     )
 
     shutil.rmtree(output_dir, ignore_errors=True)

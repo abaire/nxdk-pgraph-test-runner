@@ -55,13 +55,7 @@ class Config:
                                permanently failed.
         max_consecutive_errors_before_termination - Maximum number of times the emulator can exit without an obvious
                                                     test failure before everything is aborted.
-        xemu_net_config_automatic - whether to use the dashboard network settinsg or not
-        xemu_net_config_dhcp - if not using dashboard network settings, whether to use DHCP or static IP
-        xemu_net_config_static_ip - static IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
-        xemu_net_config_static_netmask: str - netmask IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
-        xemu_net_config_static_gateway: str - gateway IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
-        xemu_net_config_static_dns1 - IPv4 DNS server when xemu_net_config_automatic and xemu_net_config_dhcp are False
-        xemu_net_config_static_dns2 - IPv4 secondary DNS server when xemu_net_config_automatic and xemu_net_config_dhcp are False
+        network_config - dict containing nxdk_pgraph_tests network configuration to override settings from ISO.
         """
         self._emulator_command: str = emulator_command or ""
         self.iso_path: str = str(iso_path) if iso_path is not None else ""
