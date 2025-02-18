@@ -10,7 +10,6 @@ import json
 import logging
 import os
 import shutil
-import signal
 import subprocess
 import time
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -239,7 +238,8 @@ def _run_tests(config: Config, iso_path: str) -> int:
     passed_tests: list[NxdkPgraphTesterTestOutput] = []
     failed_tests: dict[str, str] = {}
 
-    consecutive_retriable_errors = 0
+    last_exit_code = 0
+    consecutive_unknown_failures = 0
     while True:
         results = _execute_emulator_and_parse_progress_log(emulator_command, config)
         if not results:
@@ -253,32 +253,27 @@ def _run_tests(config: Config, iso_path: str) -> int:
             logger.info("Emulator indicates successful shutdown")
             break
 
-        if not progress_log.last_failed_test:
-            if status == signal.SIGSEGV:
-                consecutive_retriable_errors += 1
-                if consecutive_retriable_errors > config.max_consecutive_errors_before_termination:
-                    logger.error(
-                        "Emulator exited with %d (SEGFAULT) %d times where progress log does not indicate a specific test crash\n%s",
-                        status,
-                        consecutive_retriable_errors,
-                        stderr,
-                    )
-            elif status == _TIMEOUT_STATUS:
-                consecutive_retriable_errors += 1
-                if consecutive_retriable_errors > config.max_consecutive_errors_before_termination:
-                    logger.error(
-                        "Emulator exited due to timeout %d times where progress log does not indicate a specific test crash\n%s",
-                        consecutive_retriable_errors,
-                        stderr,
-                    )
-            else:
-                logger.error(
-                    "Emulator exited with code %d but progress log does not indicate a test crash\n%s", status, stderr
-                )
-                return 1
-
         if progress_log.last_failed_test:
             failed_tests[progress_log.last_failed_test] = run_info.failure_info
+            consecutive_unknown_failures = 0
+        elif last_exit_code != status:
+            logger.error(
+                "Emulator exited with code %d but progress log does not indicate a test crash. Retrying\n%s",
+                status,
+                stderr,
+            )
+            last_exit_code = status
+            consecutive_unknown_failures = 0
+        else:
+            consecutive_unknown_failures += 1
+            if consecutive_unknown_failures > config.max_consecutive_errors_before_termination:
+                logger.error(
+                    "FATAL: Emulator exited with %d %d times where progress log does not indicate a specific test crash\n%s",
+                    status,
+                    consecutive_unknown_failures,
+                    stderr,
+                )
+                return 1
 
         if not manager.repack_with_additional_tests_disabled(
             progress_log.completed_and_failed_fully_qualified_test_names
