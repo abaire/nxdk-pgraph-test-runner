@@ -65,5 +65,18 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
         if line.startswith("GL_SHADING_LANGUAGE_VERSION:"):
             target = failure_info
 
+    # Clean up Vulkan output.
+    if failure_info and failure_info[0].startswith("Enabled instance extensions"):
+        machine_info.append(failure_info.pop(0))
+
+        last_vulkan_index = -1
+        for index, line in enumerate(failure_info):
+            if line.startswith("- VK_"):
+                last_vulkan_index = index
+
+        if last_vulkan_index >= 0:
+            machine_info.extend(failure_info[: last_vulkan_index + 1])
+            failure_info = failure_info[last_vulkan_index + 1 :]
+
     version = "-".join(version_components)
     return version, "\n".join(machine_info), "\n".join(failure_info)
