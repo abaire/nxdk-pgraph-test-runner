@@ -34,7 +34,13 @@ class NxdkPgraphTesterConfigManager:
             raise ValueError(msg)
 
     def repack_iso_fresh(
-        self, output_path: str, ftp_ip: str, ftp_port: int, ftp_username: str, ftp_password: str
+        self,
+        output_path: str,
+        ftp_ip: str,
+        ftp_port: int,
+        ftp_username: str,
+        ftp_password: str,
+        network_config: dict[str, Any] | None = None,
     ) -> bool:
         """Repacks the nxdk_pgraph_tests iso with FTP enabled."""
         tester_config = self.extract_pgraph_tester_config()
@@ -47,6 +53,9 @@ class NxdkPgraphTesterConfigManager:
 
         if self._runner_config.ftp_ip_override:
             ftp_ip = self._runner_config.ftp_ip_override
+
+        if network_config:
+            mergedeep.merge(tester_config, {"settings": {"network": network_config}})
 
         mergedeep.merge(
             tester_config,
