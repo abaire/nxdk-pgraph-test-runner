@@ -88,6 +88,28 @@ def run():
         help="Maximum number of emulator crashes without a clear cause before the run is aborted.",
         type=int,
     )
+    parser.add_argument(
+        "--network-config-automatic",
+        action="store_true",
+        help="Override nxdk_pgraph_tests network config setting to use the Dashboard config.",
+    )
+    parser.add_argument(
+        "--network-config-dhcp",
+        action="store_true",
+        help="Override nxdk_pgraph_tests network config setting to use DHCP.",
+    )
+    parser.add_argument(
+        "--network-config-ip", help="Override nxdk_pgraph_tests network config setting to use the given IPv4 address."
+    )
+    parser.add_argument(
+        "--network-config-netmask",
+        help="Override nxdk_pgraph_tests network config setting to use the given IPv4 netmask.",
+    )
+    parser.add_argument(
+        "--network-config-gateway",
+        help="Override nxdk_pgraph_tests network config setting to use the given IPv4 gateway.",
+    )
+
     args = parser.parse_args()
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -117,6 +139,19 @@ def run():
     config.test_failure_retries = args.test_failure_retries
     config.xbox_artifact_path = args.xbox_artifact_path
     config.max_consecutive_errors_before_termination = args.max_consecutive_errors
+
+    if (
+        args.network_config_automatic
+        or args.network_config_dhcp
+        or (args.network_config_ip and args.network_config_netmask and args.network_config_gateway)
+    ):
+        config.network_config = {
+            "config_automatic": args.network_config_automatic,
+            "config_dhcp": args.network_config_dhcp,
+            "static_ip": args.network_config_ip or "",
+            "static_netmask": args.network_config_netmask or "",
+            "static_gateway": args.network_config_gateway or "",
+        }
 
     if not args.no_save_config:
         logger.debug("Updating config file at %s", args.config)

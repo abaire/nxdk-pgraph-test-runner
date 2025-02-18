@@ -35,6 +35,7 @@ class Config:
         xbox_artifact_path: str = "e:\nxdk_pgraph_tests",
         test_failure_retries: int = 1,
         max_consecutive_errors_before_termination: int = 4,
+        network_config: dict[str, Any] | None = None,
     ) -> None:
         """Initializes this config.
 
@@ -54,6 +55,13 @@ class Config:
                                permanently failed.
         max_consecutive_errors_before_termination - Maximum number of times the emulator can exit without an obvious
                                                     test failure before everything is aborted.
+        xemu_net_config_automatic - whether to use the dashboard network settinsg or not
+        xemu_net_config_dhcp - if not using dashboard network settings, whether to use DHCP or static IP
+        xemu_net_config_static_ip - static IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
+        xemu_net_config_static_netmask: str - netmask IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
+        xemu_net_config_static_gateway: str - gateway IPv4 when xemu_net_config_automatic and xemu_net_config_dhcp are False
+        xemu_net_config_static_dns1 - IPv4 DNS server when xemu_net_config_automatic and xemu_net_config_dhcp are False
+        xemu_net_config_static_dns2 - IPv4 secondary DNS server when xemu_net_config_automatic and xemu_net_config_dhcp are False
         """
         self._emulator_command: str = emulator_command or ""
         self.iso_path: str = str(iso_path) if iso_path is not None else ""
@@ -64,6 +72,8 @@ class Config:
         self.xbox_artifact_path = xbox_artifact_path
         self.test_failure_retries = test_failure_retries
         self.max_consecutive_errors_before_termination = max_consecutive_errors_before_termination
+
+        self.network_config = network_config or {}
 
         self._provided_work_dir: str | None
         self._work_dir: str
@@ -105,7 +115,7 @@ class Config:
 
     def to_dict(self) -> dict[str, Any]:
         """Returns a dictionary representation of this Config."""
-        return {
+        ret = {
             "work_dir": self._provided_work_dir or "",
             "output_dir": self._provided_output_dir or "",
             "emulator_command": self._emulator_command or "",
@@ -116,6 +126,11 @@ class Config:
             "test_failure_retries": self.test_failure_retries,
             # "timeout_seconds": self.timeout_seconds,  # Intentionally not saved.
         }
+
+        if self.network_config:
+            ret["network_config"] = self.network_config
+
+        return ret
 
     @classmethod
     def from_dict(cls, config_dict: dict[str, Any]) -> Config:

@@ -299,7 +299,7 @@ def _prepare_iso(config: Config, ftp_server: FtpServer) -> str | None:
     manager = NxdkPgraphTesterConfigManager(config)
     iso_path = os.path.join(config.ensure_data_dir(), _MODIFIED_PGRAPH_TESTER_ISO)
     if not manager.repack_iso_fresh(
-        iso_path, ftp_server.address, ftp_server.port, ftp_server.username, ftp_server.password
+        iso_path, ftp_server.address, ftp_server.port, ftp_server.username, ftp_server.password, config.network_config
     ):
         return None
 
