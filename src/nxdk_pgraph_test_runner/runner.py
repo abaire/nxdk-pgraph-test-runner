@@ -280,7 +280,9 @@ def _run_tests(config: Config, iso_path: str) -> int:
         ):
             logger.error("Failed to repack with new skipped tests")
             return 1
-        os.unlink(progress_log_path)
+
+        if os.path.isfile(progress_log_path):
+            os.unlink(progress_log_path)
 
     output_path = _prepare_output_path(config, run_info.emulator_version, run_info.machine_info)
 
