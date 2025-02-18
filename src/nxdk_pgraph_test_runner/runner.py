@@ -240,6 +240,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
 
     last_exit_code = 0
     consecutive_unknown_failures = 0
+
     while True:
         results = _execute_emulator_and_parse_progress_log(emulator_command, config)
         if not results:
@@ -256,24 +257,25 @@ def _run_tests(config: Config, iso_path: str) -> int:
         if progress_log.last_failed_test:
             failed_tests[progress_log.last_failed_test] = run_info.failure_info
             consecutive_unknown_failures = 0
-        elif last_exit_code != status:
+        else:
+            if last_exit_code != status:
+                last_exit_code = status
+                consecutive_unknown_failures = 0
+            else:
+                consecutive_unknown_failures += 1
+                if consecutive_unknown_failures > config.max_consecutive_errors_before_termination:
+                    logger.error(
+                        "FATAL: Emulator exited with %d %d times where progress log does not indicate a specific test crash\n%s",
+                        status,
+                        consecutive_unknown_failures,
+                        stderr,
+                    )
+                    return 1
             logger.error(
                 "Emulator exited with code %d but progress log does not indicate a test crash. Retrying\n%s",
                 status,
                 stderr,
             )
-            last_exit_code = status
-            consecutive_unknown_failures = 0
-        else:
-            consecutive_unknown_failures += 1
-            if consecutive_unknown_failures > config.max_consecutive_errors_before_termination:
-                logger.error(
-                    "FATAL: Emulator exited with %d %d times where progress log does not indicate a specific test crash\n%s",
-                    status,
-                    consecutive_unknown_failures,
-                    stderr,
-                )
-                return 1
 
         if not manager.repack_with_additional_tests_disabled(
             progress_log.completed_and_failed_fully_qualified_test_names
