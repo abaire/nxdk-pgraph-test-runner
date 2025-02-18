@@ -31,8 +31,11 @@ class EmulatorOutput:
 def parse_emulator_info(stdout: list[str], stderr: list[str]) -> tuple[str, str, str]:
     """Attempts to parse (emulator_version, machine_info, failure_info) from the emulator output."""
     del stdout
-    if stderr and stderr[0].startswith("xemu"):
-        return _parse_xemu_info(stderr)
+    if stderr:
+        while stderr and "AppImage" in stderr[0]:
+            stderr.pop(0)
+        if stderr and stderr[0].startswith("xemu"):
+            return _parse_xemu_info(stderr)
 
     return "", "", ""
 
