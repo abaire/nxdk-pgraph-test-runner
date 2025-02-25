@@ -147,7 +147,8 @@ def _write_results(
     for test_output in all_successes:
         # Move the result artifacts for the test
         for artifact in test_output.artifacts:
-            artifact_path = os.path.join(data_dir, artifact)
+            sanitized_artifact = artifact.replace("::", "~~")
+            artifact_path = os.path.join(data_dir, sanitized_artifact)
             if not os.path.isfile(artifact_path):
                 missing_artifacts.append(artifact)
                 continue
@@ -155,7 +156,7 @@ def _write_results(
             artifact_destination = os.path.join(output_path, test_output.suite.replace(" ", "_"))
             os.makedirs(artifact_destination, exist_ok=True)
 
-            shutil.move(artifact_path, os.path.join(artifact_destination, artifact.split("::")[1]))
+            shutil.move(artifact_path, os.path.join(artifact_destination, sanitized_artifact.split("~~")[1]))
 
     if missing_artifacts:
         result_manifest["missing_artifacts"] = missing_artifacts
