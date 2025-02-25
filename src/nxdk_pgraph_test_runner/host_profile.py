@@ -31,7 +31,10 @@ class HostProfile:
         super().__init__()
 
         self.os_name = platform.system()
-        self.os_version = os.uname().release
+        if self.os_name == "Windows":
+            self.os_version = f"{platform.release()}-{platform.version()}"
+        else:
+            self.os_version = os.uname().release
         self.cpu_model = platform.machine()
 
         gl_info = get_opengl_info()
