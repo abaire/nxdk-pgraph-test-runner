@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import shlex
 import tomllib
 from typing import Any
