@@ -9,6 +9,14 @@ from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
 
+class _RenamingFTPHandler(FTPHandler):
+    """Renames incoming files to avoid restricted characters on Windows."""
+
+    def ftp_STOR(self, file, mode="w"):  # noqa: N802 Function name `ftp_STOR` should be lowercase
+        sanitized_filename = file.replace("::", "~~")
+        return super().ftp_STOR(sanitized_filename, mode)
+
+
 class FtpServer(Thread):
     """Sets up an FTP server to receive files from the nxdk_pgraph_tests program."""
 
@@ -39,7 +47,7 @@ class FtpServer(Thread):
         authorizer = DummyAuthorizer()
         authorizer.add_user(self._username, self._password, self._data_dir, perm="eamwMT")
 
-        handler = FTPHandler
+        handler = _RenamingFTPHandler
         handler.authorizer = authorizer
 
         self._server = FTPServer((ftp_ip, 0), handler)
