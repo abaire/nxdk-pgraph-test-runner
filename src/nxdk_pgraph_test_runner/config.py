@@ -85,7 +85,8 @@ class Config:
         if not self._emulator_command:
             msg = "Emulator command was not provided."
             raise ValueError(msg)
-        return shlex.split(self._emulator_command.replace("{ISO}", iso_path))
+        posix = platform.system() != "Windows"
+        return shlex.split(self._emulator_command.replace("{ISO}", iso_path), posix=posix)
 
     def set_emulator_command(self, template: str):
         self._emulator_command = template
