@@ -164,7 +164,7 @@ def _write_results(
     with open(os.path.join(output_path, _RESULT_MANIFEST_FILENAME), "w") as manifest_file:
         json.dump(result_manifest, manifest_file, ensure_ascii=True, indent=2, sort_keys=True)
 
-    return 1
+    return 0
 
 
 def get_output_dir_for_host_profile(host_profile: HostProfile, *, is_vulkan: bool = False) -> str:
