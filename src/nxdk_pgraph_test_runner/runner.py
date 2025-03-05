@@ -184,6 +184,7 @@ def get_output_dir_for_host_profile(host_profile: HostProfile, *, is_vulkan: boo
 def get_output_directory(emulator_version_info: str, host_profile: HostProfile, *, is_vulkan: bool = False) -> str:
     """Returns a directory hierarchy suitable for the given emulator version and HostProfile."""
     output_dir = emulator_version_info if emulator_version_info else "__unknown_emulator__"
+    output_dir = output_dir.replace("/", "_").replace("\\", "_")
     return os.path.join(output_dir, get_output_dir_for_host_profile(host_profile, is_vulkan=is_vulkan))
 
 
