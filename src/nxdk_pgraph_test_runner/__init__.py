@@ -109,6 +109,7 @@ def run():
         "--network-config-gateway",
         help="Override nxdk_pgraph_tests network config setting to use the given IPv4 gateway.",
     )
+    parser.add_argument("--just-suites", nargs="+", help="Just run the given suites rather than the full test set.")
 
     args = parser.parse_args()
 
@@ -136,6 +137,8 @@ def run():
         config.set_work_dir = args.work_dir
     if args.output_dir:
         config.set_output_dir = args.output_dir
+    if args.just_suites:
+        config.suite_allowlist = args.just_suites
     config.test_failure_retries = args.test_failure_retries
     config.xbox_artifact_path = args.xbox_artifact_path
     config.max_consecutive_errors_before_termination = args.max_consecutive_errors

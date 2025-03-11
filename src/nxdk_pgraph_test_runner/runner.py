@@ -239,6 +239,11 @@ def _run_tests(config: Config, iso_path: str) -> int:
     emulator_command = config.build_emulator_command(iso_path)
 
     manager = NxdkPgraphTesterConfigManager(config, iso_path)
+
+    if config.suite_allowlist and not manager.repack_with_only_test_suites(set(config.suite_allowlist)):
+        logger.error("FATAL: Failed to repack with allowlist suites %s", config.suite_allowlist)
+        return 1
+
     progress_log_path = os.path.join(config.ensure_data_dir(), "nxdk_pgraph_tests_progress.log")
 
     passed_tests: list[NxdkPgraphTesterTestOutput] = []
