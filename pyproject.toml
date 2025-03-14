@@ -7,7 +7,7 @@ name = "nxdk-pgraph-test-runner"
 dynamic = ["version"]
 description = 'Executes and captures the results of https://github.com/abaire/nxdk_pgraph_tests in an emulator'
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = ["xemu", "nv2a", "xbox", "pgraph"]
 authors = [
@@ -16,6 +16,7 @@ authors = [
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",

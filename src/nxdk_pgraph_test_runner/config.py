@@ -8,11 +8,11 @@ import logging
 import os
 import platform
 import shlex
-import tomllib
 import typing
 from typing import Any
 
 import tomli_w
+import tomllib
 
 from nxdk_pgraph_test_runner.host_profile import HostProfile
 
