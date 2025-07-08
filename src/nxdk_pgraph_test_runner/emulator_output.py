@@ -64,6 +64,9 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
         # Discard paths that contain user info.
         if line.startswith("xemu_settings_get_"):
             continue
+        # Raw image warning message may contain user info.
+        if line.startswith("WARNING: Image format was not specified for"):
+            continue
         target.append(line)
         if line.startswith("GL_SHADING_LANGUAGE_VERSION:"):
             target = failure_info

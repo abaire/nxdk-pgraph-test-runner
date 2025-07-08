@@ -21,6 +21,7 @@ _XEMU_STDERR = [
     "GL_RENDERER: Apple M3 Max",
     "GL_VERSION: 4.1 Metal - 88.1",
     "GL_SHADING_LANGUAGE_VERSION: 4.10",
+    "WARNING: Image format was not specified for 'secret path' ...",
 ]
 
 _XEMU_STDERR_SCRUBBED = [
@@ -68,6 +69,7 @@ _XEMU_VULKAN_STDDERR = [
     "GL_RENDERER: NVIDIA GeForce GTX 1070/PCIe/SSE2",
     "GL_VERSION: 4.0.0 NVIDIA 570.86.15",
     "GL_SHADING_LANGUAGE_VERSION: 4.00 NVIDIA via Cg compiler",
+    "WARNING: Image format was not specified for 'secret path' ...",
     "Enabled instance extensions:",
     "- VK_KHR_surface",
     "- VK_KHR_xlib_surface",
