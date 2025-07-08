@@ -61,6 +61,9 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
     target = machine_info
 
     for line in stderr:
+        # Discard paths that contain user info.
+        if line.startswith("xemu_settings_get_"):
+            continue
         target.append(line)
         if line.startswith("GL_SHADING_LANGUAGE_VERSION:"):
             target = failure_info
