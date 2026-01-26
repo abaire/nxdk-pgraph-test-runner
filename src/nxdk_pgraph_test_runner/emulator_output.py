@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ruff: noqa: T201 `print` found
-
 from __future__ import annotations
 
 import re

@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ruff: noqa: PLR2004 Magic value used in comparison
-
 from __future__ import annotations
 
 import logging

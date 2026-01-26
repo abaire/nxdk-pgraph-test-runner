@@ -12,7 +12,7 @@ from nxdk_pgraph_test_runner.config import Config
 def test_loads_empty():
     sut = Config.loads("")
 
-    with pytest.raises(ValueError, match="Emulator command was not provided."):
+    with pytest.raises(ValueError, match=r"Emulator command was not provided."):
         sut.build_emulator_command("foo_bar")
 
 
