@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ruff: noqa: N802 Function name should be lowercase
-
 from __future__ import annotations
 
 import pytest

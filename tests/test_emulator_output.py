@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# ruff: noqa: T201 `print` found
-
 from __future__ import annotations
 
 from nxdk_pgraph_test_runner.emulator_output import parse_emulator_info
@@ -69,6 +67,7 @@ _XEMU_VULKAN_STDDERR = [
     "GL_RENDERER: NVIDIA GeForce GTX 1070/PCIe/SSE2",
     "GL_VERSION: 4.0.0 NVIDIA 570.86.15",
     "GL_SHADING_LANGUAGE_VERSION: 4.00 NVIDIA via Cg compiler",
+    "GL geometry shader winding: 0, 0, 0, 0",
     "WARNING: Image format was not specified for 'secret path' ...",
     "Enabled instance extensions:",
     "- VK_KHR_surface",
@@ -103,6 +102,7 @@ _XEMU_VULKAN_STDDERR_SCRUBBED = [
     "GL_RENDERER: NVIDIA GeForce GTX 1070/PCIe/SSE2",
     "GL_VERSION: 4.0.0 NVIDIA 570.86.15",
     "GL_SHADING_LANGUAGE_VERSION: 4.00 NVIDIA via Cg compiler",
+    "GL geometry shader winding: 0, 0, 0, 0",
     "Enabled instance extensions:",
     "- VK_KHR_surface",
     "- VK_KHR_xlib_surface",
