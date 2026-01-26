@@ -67,7 +67,14 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
         # Raw image warning message may contain user info.
         if line.startswith("WARNING: Image format was not specified for"):
             continue
+
+        # Handle 0.8.109 GL winding order output
+        if target == failure_info and line.startswith("GL geometry shader winding"):
+            machine_info.append(line)
+            continue
+
         target.append(line)
+
         if line.startswith("GL_SHADING_LANGUAGE_VERSION:"):
             target = failure_info
 
