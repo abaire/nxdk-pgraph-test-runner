@@ -66,6 +66,7 @@ class NxdkPgraphTesterConfigManager:
                     "enable_shutdown_on_completion": True,
                     "output_directory_path": self._runner_config.xbox_artifact_path,
                     "skip_tests_by_default": False,
+                    "delay_milliseconds_before_exit": 0,
                     "network": {
                         "enable": True,
                         "ftp": {
