@@ -92,6 +92,8 @@ def _parse_log(progress_file: TextIO, artifact_dir: str) -> tuple[list[NxdkPgrap
                 raise NotImplementedError(msg)
 
             last_started_test = None
+            if completed_test is None:
+                completed_test = ""
             completed_tests.append(
                 NxdkPgraphTesterTestOutput.create(
                     completed_test, duration_milliseconds, artifact_dir, artifacts, missing
