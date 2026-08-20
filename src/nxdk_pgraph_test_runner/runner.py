@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from nxdk_pgraph_test_runner._ftp_server import FtpServer
 from nxdk_pgraph_test_runner._nxdk_pgraph_tester_config import NxdkPgraphTesterConfigManager
 from nxdk_pgraph_test_runner._nxdk_pgraph_tester_progress_log import NxdkPgraphTesterProgressLog
-from nxdk_pgraph_test_runner.emulator_output import EmulatorOutput
+from nxdk_pgraph_test_runner.emulator_output import EmulatorOutput, is_vulkan_machine_info
 
 if TYPE_CHECKING:
     from nxdk_pgraph_test_runner._nxdk_pgraph_tester_test_output import NxdkPgraphTesterTestOutput
@@ -191,7 +191,9 @@ def get_output_directory(emulator_version_info: str, host_profile: HostProfile, 
 def _prepare_output_path(config: Config, emulator_version_info: str, machine_info: str) -> str:
     output_dir = os.path.join(
         config.ensure_output_dir(),
-        get_output_directory(emulator_version_info, config.host_profile, is_vulkan="\n- VK_" in machine_info),
+        get_output_directory(
+            emulator_version_info, config.host_profile, is_vulkan=is_vulkan_machine_info(machine_info)
+        ),
     )
 
     shutil.rmtree(output_dir, ignore_errors=True)

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from nxdk_pgraph_test_runner.emulator_output import parse_emulator_info
+from nxdk_pgraph_test_runner.emulator_output import EmulatorOutput, parse_emulator_info
 
 _XEMU_STDERR = [
     "xemu_version: 0.8.10",
@@ -140,3 +140,76 @@ def test_parse_xemu_vulkan_with_error():
     assert version == "xemu-0.8.20-master-3bdb9e7fd4d6c9f5adec0543f1679d2943a0d092"
     assert machine_info == "\n".join(_XEMU_VULKAN_STDDERR_SCRUBBED)
     assert failure_info == "\n".join(errors)
+
+
+_XEMU_VULKAN_NEW_STDERR = [
+    "xemu_version: 0.8.136",
+    "xemu_commit: fc24584ce88f0915ad7f04775bb7712c2e3f49ee",
+    "xemu_date: Mon Jun  8 05:42:46 UTC 2026",
+    "xemu_settings_set_path: config path: /tmp/temp/inputs/xemu.toml",
+    "CPU: ",
+    "OS_Version: Ubuntu 24.04.4 LTS",
+    "GL_VENDOR: NVIDIA Corporation",
+    "GL_RENDERER: NVIDIA GeForce RTX 4090/PCIe/SSE2",
+    "GL_VERSION: 4.0.0 NVIDIA 580.178.04",
+    "GL_SHADING_LANGUAGE_VERSION: 4.00 NVIDIA via Cg compiler",
+    "GL geometry shader winding: 0, 0, 0, 0",
+    "Available physical devices:",
+    "- NVIDIA GeForce RTX 4090",
+    "- llvmpipe (LLVM 20.1.2, 256 bits)",
+    "Selected physical device: NVIDIA GeForce RTX 4090",
+    "- Vendor: 10de, Device: 2684",
+    "- Driver Version: 580.712.256",
+    "Enabled device extensions:",
+    "- VK_KHR_external_memory_fd",
+    "- VK_KHR_external_semaphore_fd",
+    "- VK_EXT_custom_border_color",
+    "- VK_EXT_memory_budget",
+    "VK geometry shader winding: 0, 0, 0, 0",
+]
+
+_XEMU_VULKAN_NEW_STDERR_SCRUBBED = [
+    "xemu_version: 0.8.136",
+    "xemu_commit: fc24584ce88f0915ad7f04775bb7712c2e3f49ee",
+    "xemu_date: Mon Jun  8 05:42:46 UTC 2026",
+    "CPU: ",
+    "OS_Version: Ubuntu 24.04.4 LTS",
+    "GL_VENDOR: NVIDIA Corporation",
+    "GL_RENDERER: NVIDIA GeForce RTX 4090/PCIe/SSE2",
+    "GL_VERSION: 4.0.0 NVIDIA 580.178.04",
+    "GL_SHADING_LANGUAGE_VERSION: 4.00 NVIDIA via Cg compiler",
+    "GL geometry shader winding: 0, 0, 0, 0",
+    "Available physical devices:",
+    "- NVIDIA GeForce RTX 4090",
+    "- llvmpipe (LLVM 20.1.2, 256 bits)",
+    "Selected physical device: NVIDIA GeForce RTX 4090",
+    "- Vendor: 10de, Device: 2684",
+    "- Driver Version: 580.712.256",
+    "Enabled device extensions:",
+    "- VK_KHR_external_memory_fd",
+    "- VK_KHR_external_semaphore_fd",
+    "- VK_EXT_custom_border_color",
+    "- VK_EXT_memory_budget",
+    "VK geometry shader winding: 0, 0, 0, 0",
+]
+
+
+def test_parse_xemu_vulkan_new_format():
+    output = EmulatorOutput.parse(stdout=[], stderr=_XEMU_VULKAN_NEW_STDERR.copy())
+
+    assert output.emulator_version == "xemu-0.8.136-fc24584ce88f0915ad7f04775bb7712c2e3f49ee"
+    assert output.machine_info == "\n".join(_XEMU_VULKAN_NEW_STDERR_SCRUBBED)
+    assert not output.failure_info
+    assert output.is_vulkan is True
+
+
+def test_parse_xemu_vulkan_new_format_with_error():
+    errors = [
+        "vk_result = -3",
+        "xemu-0.8.136-x86_64.AppImage: assertion failed",
+    ]
+    output = EmulatorOutput.parse(stdout=[], stderr=_XEMU_VULKAN_NEW_STDERR + errors)
+    assert output.emulator_version == "xemu-0.8.136-fc24584ce88f0915ad7f04775bb7712c2e3f49ee"
+    assert output.machine_info == "\n".join(_XEMU_VULKAN_NEW_STDERR_SCRUBBED)
+    assert output.failure_info == "\n".join(errors)
+    assert output.is_vulkan is True
