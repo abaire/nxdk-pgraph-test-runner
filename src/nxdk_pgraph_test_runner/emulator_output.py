@@ -25,6 +25,25 @@ class EmulatorOutput:
         """Extracts information from the stdout and stderr from running an emulator."""
         return cls(*parse_emulator_info(stdout, stderr))
 
+    @property
+    def is_vulkan(self) -> bool:
+        """Indicates whether this emulator output used the Vulkan renderer."""
+        return is_vulkan_machine_info(self.machine_info)
+
+
+def is_vulkan_machine_info(machine_info: str) -> bool:
+    """Checks if the given machine info indicates that Vulkan was enabled."""
+    return any(
+        marker in machine_info
+        for marker in (
+            "\n- VK_",
+            "\nSelected physical device",
+            "\nAvailable physical devices:",
+            "\nEnabled device extensions:",
+            "\nVK geometry shader winding",
+        )
+    )
+
 
 def parse_emulator_info(stdout: list[str], stderr: list[str]) -> tuple[str, str, str]:
     """Attempts to parse (emulator_version, machine_info, failure_info) from the emulator output."""
@@ -36,6 +55,23 @@ def parse_emulator_info(stdout: list[str], stderr: list[str]) -> tuple[str, str,
             return _parse_xemu_info(stderr)
 
     return "", "", ""
+
+
+_VULKAN_START_PREFIXES = (
+    "Enabled instance extensions:",
+    "Available physical devices:",
+    "Selected physical device",
+    "Enabled device extensions:",
+)
+
+_VULKAN_CONTINUATION_PREFIXES = (
+    "Enabled instance extensions:",
+    "Available physical devices:",
+    "Selected physical device",
+    "Enabled device extensions:",
+    "VK geometry shader winding",
+    "- ",
+)
 
 
 def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
@@ -60,7 +96,7 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
 
     for line in stderr:
         # Discard paths that contain user info.
-        if line.startswith("xemu_settings_get_"):
+        if line.startswith(("xemu_settings_get_", "xemu_settings_set_")):
             continue
         # Raw image warning message may contain user info.
         if line.startswith("WARNING: Image format was not specified for"):
@@ -76,18 +112,13 @@ def _parse_xemu_info(stderr: list[str]) -> tuple[str, str, str]:
         if line.startswith("GL_SHADING_LANGUAGE_VERSION:"):
             target = failure_info
 
-    # Clean up Vulkan output.
-    if failure_info and failure_info[0].startswith("Enabled instance extensions"):
-        machine_info.append(failure_info.pop(0))
-
-        last_vulkan_index = -1
-        for index, line in enumerate(failure_info):
-            if line.startswith("- VK_"):
-                last_vulkan_index = index
-
-        if last_vulkan_index >= 0:
-            machine_info.extend(failure_info[: last_vulkan_index + 1])
-            failure_info = failure_info[last_vulkan_index + 1 :]
+    # Clean up Vulkan output (supports both older xemu with 'Enabled instance extensions:'
+    # and newer xemu starting directly with 'Available physical devices:' etc.).
+    if failure_info and any(failure_info[0].startswith(p) for p in _VULKAN_START_PREFIXES):
+        vulkan_lines = []
+        while failure_info and any(failure_info[0].startswith(p) for p in _VULKAN_CONTINUATION_PREFIXES):
+            vulkan_lines.append(failure_info.pop(0))
+        machine_info.extend(vulkan_lines)
 
     version = "-".join(version_components)
     return version, "\n".join(machine_info), "\n".join(failure_info)
