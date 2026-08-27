@@ -11,6 +11,8 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
+import threading
 import time
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -45,15 +47,53 @@ def validate_config(config: Config) -> list[str]:
 
 
 def _execute_emulator(emulator_command: list[str], config: Config) -> tuple[int, list[str], list[str]]:
+    logger.debug("Executing emulator: %s", " ".join(emulator_command))
+    lines: list[str] = []
+    is_debug = logger.isEnabledFor(logging.DEBUG)
+
     try:
-        results = subprocess.run(
-            emulator_command, capture_output=True, text=True, timeout=config.timeout_seconds, check=False
+        process = subprocess.Popen(
+            emulator_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
+            bufsize=1,
         )
     except FileNotFoundError:
         logger.exception("Failed to execute emulator")
         return 255, [], [f"Failed to execute command {emulator_command}"]
 
-    return results.returncode, results.stdout.split("\n"), results.stderr.split("\n")
+    timed_out = False
+
+    def _on_timeout() -> None:
+        nonlocal timed_out
+        timed_out = True
+        logger.error("Timeout (%ds) exceeded, killing process...", config.timeout_seconds)
+        process.kill()
+
+    timeout_timer = threading.Timer(config.timeout_seconds, _on_timeout)
+    timeout_timer.start()
+
+    try:
+        if process.stdout:
+            for line in process.stdout:
+                if is_debug:
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                lines.append(line.rstrip("\r\n"))
+    except Exception:
+        logger.exception("Error while reading emulator output")
+        process.kill()
+        raise
+    finally:
+        timeout_timer.cancel()
+        process.wait()
+
+    retcode = _TIMEOUT_STATUS if timed_out else process.returncode
+
+    logger.debug("Emulator exited with status code %d", retcode)
+    return retcode, lines, lines
 
 
 class RetryResults(NamedTuple):
@@ -268,6 +308,12 @@ def _run_tests(config: Config, iso_path: str) -> int:
             break
 
         if progress_log.last_failed_test:
+            logger.warning(
+                "Test '%s' crashed or failed (status %d, failure info: %s).",
+                progress_log.last_failed_test,
+                status,
+                run_info.failure_info,
+            )
             failed_tests[progress_log.last_failed_test] = run_info.failure_info
             consecutive_unknown_failures = 0
         else:
@@ -281,15 +327,21 @@ def _run_tests(config: Config, iso_path: str) -> int:
                         "FATAL: Emulator exited with %d %d times where progress log does not indicate a specific test crash\n%s",
                         status,
                         consecutive_unknown_failures,
-                        stderr,
+                        "\n".join(stderr),
                     )
                     return 1
             logger.error(
-                "Emulator exited with code %d but progress log does not indicate a test crash. Retrying\n%s",
+                "Emulator exited with code %d but progress log does not indicate a test crash. Retrying (unknown failure %d/%d)\n%s",
                 status,
-                stderr,
+                consecutive_unknown_failures,
+                config.max_consecutive_errors_before_termination,
+                "\n".join(stderr),
             )
 
+        logger.debug(
+            "Repacking ISO to disable %d completed/failed test(s) and restarting emulator...",
+            len(progress_log.completed_and_failed_fully_qualified_test_names),
+        )
         if not manager.repack_with_additional_tests_disabled(
             progress_log.completed_and_failed_fully_qualified_test_names
         ):
