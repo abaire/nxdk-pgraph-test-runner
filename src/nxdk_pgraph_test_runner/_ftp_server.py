@@ -49,6 +49,7 @@ class FtpServer(Thread):
 
         handler = _RenamingFTPHandler
         handler.authorizer = authorizer
+        handler.timeout = 0
 
         self._server = FTPServer((ftp_ip, 0), handler)
         self._server.max_cons = 8
