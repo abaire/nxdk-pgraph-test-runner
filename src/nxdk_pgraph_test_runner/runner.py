@@ -1,5 +1,3 @@
-# SPDX-FileCopyrightText: 2025-present Erik Abair <erik.abair@bearbrains.work>
-#
 # SPDX-License-Identifier: MIT
 
 # ruff: noqa: T201 `print` found
@@ -309,6 +307,16 @@ def _execute_emulator_and_parse_progress_log(
     return status, run_info, progress_log, stderr
 
 
+def _log_progress_tail(progress_log: NxdkPgraphTesterProgressLog, max_lines: int = 5) -> None:
+    if not progress_log.raw_log:
+        return
+    tail = [line.rstrip("\r\n") for line in progress_log.raw_log[-max_lines:]]
+    if tail:
+        logger.debug("Progress log tail:\n%s", "\n".join(tail))
+    else:
+        logger.warning("No progress log entries")
+
+
 def _run_tests(config: Config, iso_path: str, ftp_server: FtpServer | None = None) -> int:
     emulator_command = config.build_emulator_command(iso_path)
 
@@ -346,9 +354,12 @@ def _run_tests(config: Config, iso_path: str, ftp_server: FtpServer | None = Non
                 status,
                 run_info.failure_info,
             )
+            _log_progress_tail(progress_log)
             failed_tests[progress_log.last_failed_test] = run_info.failure_info
             consecutive_unknown_failures = 0
         else:
+            logger.warning("Emulator exited with status %d but no active test was in progress log.", status)
+            _log_progress_tail(progress_log)
             if last_exit_code != status:
                 last_exit_code = status
                 consecutive_unknown_failures = 0

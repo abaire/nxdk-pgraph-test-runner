@@ -31,21 +31,24 @@ class NxdkPgraphTesterProgressLog:
     def __init__(self, progress_log_path: str, artifact_path: str) -> None:
         finished_tests: list[NxdkPgraphTesterTestOutput] = []
         maybe_failed: str | None = None
+        raw_log: list[str] = []
 
         if os.path.isfile(progress_log_path):
-            with open(progress_log_path) as progress_file:
-                finished_tests, maybe_failed = _parse_log(progress_file, artifact_path)
+            with open(progress_log_path, errors="replace") as progress_file:
+                finished_tests, maybe_failed, raw_log = _parse_log(progress_file, artifact_path)
 
         self.completed_tests: list[NxdkPgraphTesterTestOutput] = finished_tests
         self.last_failed_test: str | None = maybe_failed
+        self.raw_log: list[str] = raw_log
 
     def update(self, progress_log_path: str, artifact_path: str) -> None:
         """Updates the set of completed tests."""
-        with open(progress_log_path) as progress_file:
-            finished_tests, maybe_failed = _parse_log(progress_file, artifact_path)
+        with open(progress_log_path, errors="replace") as progress_file:
+            finished_tests, maybe_failed, raw_log = _parse_log(progress_file, artifact_path)
 
         self.completed_tests.extend(finished_tests)
         self.last_failed_test = maybe_failed
+        self.raw_log = raw_log
 
     @property
     def completed_and_failed_fully_qualified_test_names(self) -> set[str]:
@@ -56,15 +59,19 @@ class NxdkPgraphTesterProgressLog:
         return ret
 
 
-def _parse_log(progress_file: TextIO, artifact_dir: str) -> tuple[list[NxdkPgraphTesterTestOutput], str | None]:
-    """Processes the given progress_file into a list of completed tests and an optional test that failed to complete."""
+def _parse_log(
+    progress_file: TextIO, artifact_dir: str
+) -> tuple[list[NxdkPgraphTesterTestOutput], str | None, list[str]]:
+    """Processes the given progress_file into a list of completed tests, an optional test that failed to complete, and raw log lines."""
 
     completed_tests: list[NxdkPgraphTesterTestOutput] = []
     last_started_test: str | None = None
     artifacts: list[str] = []
     missing: list[str] = []
+    raw_lines: list[str] = []
 
     for line in progress_file:
+        raw_lines.append(line)
         match = _START_MESSAGE.match(line)
         if match:
             artifacts.clear()
@@ -103,4 +110,4 @@ def _parse_log(progress_file: TextIO, artifact_dir: str) -> tuple[list[NxdkPgrap
 
         logger.warning("Unexpected line '%s'", line.strip())
 
-    return completed_tests, last_started_test
+    return completed_tests, last_started_test, raw_lines
