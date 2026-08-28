@@ -31,6 +31,7 @@ class Config:
     """Holds program configuration information."""
 
     _DEFAULT_TIMEOUT_SECONDS = 120 * 60
+    _DEFAULT_STALL_TIMEOUT_SECONDS = 30
 
     def __init__(
         self,
@@ -42,6 +43,7 @@ class Config:
         ftp_preferred_interface: str | None = None,
         ftp_ip_override: str | None = None,
         timeout_seconds: int = 0,
+        stall_timeout_seconds: int = 0,
         xbox_artifact_path: str = "e:\nxdk_pgraph_tests",
         test_failure_retries: int = 1,
         max_consecutive_errors_before_termination: int = 4,
@@ -60,7 +62,8 @@ class Config:
                                   May be used instead of ftp_ip.
         ftp_ip_override - Optional IP address to report to nxdk_pgraph_tests. Generally used to facilitate NAT addressing
                           (e.g., qemu 10.0.2.2 = "host").
-        timeout_seconds - Maximum time that the nxdk_pgraph_tests will be allowed to run before being forcibly killed.
+        timeout_seconds - Maximum total time that the emulator will be allowed to run before being forcibly killed.
+        stall_timeout_seconds - Maximum time without any FTP activity before the emulator is considered hung and killed.
         xbox_artifact_path - Path within the emulated Xbox into which nxdk_pgraph_tests results will be written.
         test_failure_retries - The number of times to retry tests that crash the emulator before considering them
                                permanently failed.
@@ -74,6 +77,9 @@ class Config:
         self.ftp_preferred_interface: str | None = ftp_preferred_interface
         self.ftp_ip_override: str | None = ftp_ip_override
         self.timeout_seconds = timeout_seconds if timeout_seconds else self._DEFAULT_TIMEOUT_SECONDS
+        self.stall_timeout_seconds = (
+            stall_timeout_seconds if stall_timeout_seconds else self._DEFAULT_STALL_TIMEOUT_SECONDS
+        )
         self.xbox_artifact_path = xbox_artifact_path
         self.test_failure_retries = test_failure_retries
         self.max_consecutive_errors_before_termination = max_consecutive_errors_before_termination
