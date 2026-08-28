@@ -41,3 +41,18 @@ ftp_preferred_interface = ""
 test_failure_retries = 1
 """
     )
+
+
+def test_config_timeouts():
+    sut_default = Config(emulator_command="xemu", iso_path="test.iso")
+    assert sut_default.timeout_seconds == 120 * 60
+    assert sut_default.stall_timeout_seconds == 30
+
+    sut_custom = Config(
+        emulator_command="xemu",
+        iso_path="test.iso",
+        timeout_seconds=600,
+        stall_timeout_seconds=20,
+    )
+    assert sut_custom.timeout_seconds == 600
+    assert sut_custom.stall_timeout_seconds == 20

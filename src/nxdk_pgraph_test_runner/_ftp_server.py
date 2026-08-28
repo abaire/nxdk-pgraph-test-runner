@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from threading import Thread
 
 import ifaddr
@@ -12,9 +13,36 @@ from pyftpdlib.servers import FTPServer
 class _RenamingFTPHandler(FTPHandler):
     """Renames incoming files to avoid restricted characters on Windows."""
 
+    def handle_cmd(self, cmd, arg):
+        notify = getattr(self.server, "notify_activity", None)
+        if notify:
+            notify()
+        super().handle_cmd(cmd, arg)
+
+    def on_file_received(self, file):
+        notify = getattr(self.server, "notify_activity", None)
+        if notify:
+            notify()
+        super().on_file_received(file)
+
+    def on_incomplete_file_received(self, file):
+        notify = getattr(self.server, "notify_activity", None)
+        if notify:
+            notify()
+        super().on_incomplete_file_received(file)
+
     def ftp_STOR(self, file, mode="w"):  # noqa: N802 Function name `ftp_STOR` should be lowercase
+        notify = getattr(self.server, "notify_activity", None)
+        if notify:
+            notify()
         sanitized_filename = file.replace("::", "~~")
         return super().ftp_STOR(sanitized_filename, mode)
+
+    def ftp_APPE(self, file):  # noqa: N802 Function name `ftp_APPE` should be lowercase
+        notify = getattr(self.server, "notify_activity", None)
+        if notify:
+            notify()
+        return super().ftp_APPE(file)
 
 
 class FtpServer(Thread):
@@ -43,6 +71,7 @@ class FtpServer(Thread):
 
         self._username = username if username else "xbox"
         self._password = password if password else "xbox"
+        self._last_activity_time: float = time.time()
 
         authorizer = DummyAuthorizer()
         authorizer.add_user(self._username, self._password, self._data_dir, perm="eamwMT")
@@ -52,10 +81,21 @@ class FtpServer(Thread):
         handler.timeout = 0
 
         self._server = FTPServer((ftp_ip, 0), handler)
+        self._server.notify_activity = self.notify_activity  # type: ignore[attr-defined]
         self._server.max_cons = 8
 
         self._address, self._port = self._server.address
         self._server_running = False
+
+    @property
+    def last_activity_time(self) -> float:
+        return self._last_activity_time
+
+    def notify_activity(self) -> None:
+        self._last_activity_time = time.time()
+
+    def reset_activity_timer(self) -> None:
+        self._last_activity_time = time.time()
 
     @property
     def address(self) -> str:

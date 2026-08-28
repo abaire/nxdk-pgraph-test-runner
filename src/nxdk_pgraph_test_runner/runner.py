@@ -46,7 +46,9 @@ def validate_config(config: Config) -> list[str]:
     return ret
 
 
-def _execute_emulator(emulator_command: list[str], config: Config) -> tuple[int, list[str], list[str]]:
+def _execute_emulator(
+    emulator_command: list[str], config: Config, ftp_server: FtpServer | None = None
+) -> tuple[int, list[str], list[str]]:
     logger.debug("Executing emulator: %s", " ".join(emulator_command))
     lines: list[str] = []
     is_debug = logger.isEnabledFor(logging.DEBUG)
@@ -64,16 +66,44 @@ def _execute_emulator(emulator_command: list[str], config: Config) -> tuple[int,
         logger.exception("Failed to execute emulator")
         return 255, [], [f"Failed to execute command {emulator_command}"]
 
+    if ftp_server:
+        ftp_server.reset_activity_timer()
+
     timed_out = False
+    stop_watchdog = threading.Event()
 
-    def _on_timeout() -> None:
+    def _watchdog() -> None:
         nonlocal timed_out
-        timed_out = True
-        logger.error("Timeout (%ds) exceeded, killing process...", config.timeout_seconds)
-        process.kill()
+        start_time = time.time()
+        last_seen = ftp_server.last_activity_time if ftp_server else start_time
 
-    timeout_timer = threading.Timer(config.timeout_seconds, _on_timeout)
-    timeout_timer.start()
+        while not stop_watchdog.wait(timeout=0.5):
+            now = time.time()
+            current_activity = ftp_server.last_activity_time if ftp_server else last_seen
+            last_seen = max(last_seen, current_activity)
+
+            total_elapsed = now - start_time
+            if config.timeout_seconds > 0 and total_elapsed >= config.timeout_seconds:
+                timed_out = True
+                logger.error(
+                    "Overall timeout (%ds) exceeded running emulator, killing process...",
+                    config.timeout_seconds,
+                )
+                process.kill()
+                break
+
+            idle_time = now - last_seen
+            if config.stall_timeout_seconds > 0 and idle_time >= config.stall_timeout_seconds:
+                timed_out = True
+                logger.error(
+                    "Stall timeout (%ds inactivity) exceeded running emulator, killing process...",
+                    config.stall_timeout_seconds,
+                )
+                process.kill()
+                break
+
+    watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
+    watchdog_thread.start()
 
     try:
         if process.stdout:
@@ -87,7 +117,8 @@ def _execute_emulator(emulator_command: list[str], config: Config) -> tuple[int,
         process.kill()
         raise
     finally:
-        timeout_timer.cancel()
+        stop_watchdog.set()
+        watchdog_thread.join(timeout=2.0)
         process.wait()
 
     retcode = _TIMEOUT_STATUS if timed_out else process.returncode
@@ -128,6 +159,7 @@ def _retry_failed_tests(
     emulator_command: list[str],
     manager: NxdkPgraphTesterConfigManager,
     failed_tests: dict[str, str],
+    ftp_server: FtpServer | None = None,
 ) -> dict[str, RetryResults]:
     ret: dict[str, RetryResults] = {}
     for fq_test_name, last_failure in failed_tests.items():
@@ -139,7 +171,7 @@ def _retry_failed_tests(
 
         logger.info("Retrying previously failed test %s", fq_test_name)
         for _ in range(config.test_failure_retries):
-            results = _execute_emulator_and_parse_progress_log(emulator_command, config)
+            results = _execute_emulator_and_parse_progress_log(emulator_command, config, ftp_server=ftp_server)
             if not results:
                 retry_results.errors.append("Timeout")
                 break
@@ -246,10 +278,10 @@ def _prepare_output_path(config: Config, emulator_version_info: str, machine_inf
 
 
 def _execute_emulator_and_parse_results(
-    emulator_command: list[str], config: Config
+    emulator_command: list[str], config: Config, ftp_server: FtpServer | None = None
 ) -> tuple[int, EmulatorOutput, list[str]] | None:
     try:
-        status, stdout, stderr = _execute_emulator(emulator_command, config)
+        status, stdout, stderr = _execute_emulator(emulator_command, config, ftp_server=ftp_server)
 
     except subprocess.TimeoutExpired as err:
         logger.error("Timeout exceeded running %s.", emulator_command)  # noqa: TRY400 Use `logging.exception`
@@ -261,9 +293,9 @@ def _execute_emulator_and_parse_results(
 
 
 def _execute_emulator_and_parse_progress_log(
-    emulator_command: list[str], config: Config
+    emulator_command: list[str], config: Config, ftp_server: FtpServer | None = None
 ) -> tuple[int, EmulatorOutput, NxdkPgraphTesterProgressLog, list[str]] | None:
-    results = _execute_emulator_and_parse_results(emulator_command, config)
+    results = _execute_emulator_and_parse_results(emulator_command, config, ftp_server=ftp_server)
     if not results:
         return None
 
@@ -277,7 +309,7 @@ def _execute_emulator_and_parse_progress_log(
     return status, run_info, progress_log, stderr
 
 
-def _run_tests(config: Config, iso_path: str) -> int:
+def _run_tests(config: Config, iso_path: str, ftp_server: FtpServer | None = None) -> int:
     emulator_command = config.build_emulator_command(iso_path)
 
     manager = NxdkPgraphTesterConfigManager(config, iso_path)
@@ -295,7 +327,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
     consecutive_unknown_failures = 0
 
     while True:
-        results = _execute_emulator_and_parse_progress_log(emulator_command, config)
+        results = _execute_emulator_and_parse_progress_log(emulator_command, config, ftp_server=ftp_server)
         if not results:
             return 255
 
@@ -353,7 +385,7 @@ def _run_tests(config: Config, iso_path: str) -> int:
 
     output_path = _prepare_output_path(config, run_info.emulator_version, run_info.machine_info)
 
-    retry_results = _retry_failed_tests(config, emulator_command, manager, failed_tests)
+    retry_results = _retry_failed_tests(config, emulator_command, manager, failed_tests, ftp_server=ftp_server)
 
     return _write_results(config, output_path, passed_tests, retry_results)
 
@@ -394,7 +426,7 @@ def entrypoint(config: Config) -> int:
         ftp_server.start()
 
         start = time.time()
-        exit_value = _run_tests(config, iso_path)
+        exit_value = _run_tests(config, iso_path, ftp_server=ftp_server)
         elapsed = time.time() - start
 
         print(f"Completed test suite in {elapsed} seconds")
