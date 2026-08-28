@@ -108,6 +108,18 @@ def _parse_log(
             )
             continue
 
+        if line.startswith("DEBUG:"):
+            logger.debug(line[len("DEBUG:") :])
+            continue
+
+        if line.startswith("WARN:"):
+            logger.debug(line[len("WARN:") :])
+            continue
+
+        if line.startswith("ERROR:"):
+            logger.debug(line[len("ERROR:") :])
+            continue
+
         logger.warning("Unexpected line '%s'", line.strip())
 
     return completed_tests, last_started_test, raw_lines
