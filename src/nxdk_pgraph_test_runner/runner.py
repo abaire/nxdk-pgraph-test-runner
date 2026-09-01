@@ -4,15 +4,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import threading
 import time
 from typing import TYPE_CHECKING, Any, NamedTuple
+
+import psutil
 
 from nxdk_pgraph_test_runner._ftp_server import FtpServer
 from nxdk_pgraph_test_runner._nxdk_pgraph_tester_config import NxdkPgraphTesterConfigManager
@@ -44,6 +48,34 @@ def validate_config(config: Config) -> list[str]:
     return ret
 
 
+def _kill_process_tree(process: subprocess.Popen[Any] | psutil.Process | int) -> None:
+    """Recursively terminates and kills a process and all of its descendant processes."""
+    pid = process.pid if isinstance(process, subprocess.Popen | psutil.Process) else process
+
+    if sys.platform != "win32":
+        try:
+            pgid = os.getpgid(pid)
+            if pgid != os.getpgrp():
+                os.killpg(pgid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+
+    try:
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                child.kill()
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            parent.kill()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+
+    if isinstance(process, subprocess.Popen):
+        with contextlib.suppress(OSError):
+            process.kill()
+
+
 def _execute_emulator(
     emulator_command: list[str], config: Config, ftp_server: FtpServer | None = None
 ) -> tuple[int, list[str], list[str]]:
@@ -51,15 +83,20 @@ def _execute_emulator(
     lines: list[str] = []
     is_debug = logger.isEnabledFor(logging.DEBUG)
 
+    popen_kwargs: dict[str, Any] = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "text": True,
+        "errors": "replace",
+        "bufsize": 1,
+    }
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_kwargs["start_new_session"] = True
+
     try:
-        process = subprocess.Popen(
-            emulator_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            errors="replace",
-            bufsize=1,
-        )
+        process = subprocess.Popen(emulator_command, **popen_kwargs)
     except FileNotFoundError:
         logger.exception("Failed to execute emulator")
         return 255, [], [f"Failed to execute command {emulator_command}"]
@@ -87,7 +124,7 @@ def _execute_emulator(
                     "Overall timeout (%ds) exceeded running emulator, killing process...",
                     config.timeout_seconds,
                 )
-                process.kill()
+                _kill_process_tree(process)
                 break
 
             idle_time = now - last_seen
@@ -97,27 +134,55 @@ def _execute_emulator(
                     "Stall timeout (%ds inactivity) exceeded running emulator, killing process...",
                     config.stall_timeout_seconds,
                 )
-                process.kill()
+                _kill_process_tree(process)
                 break
+
+        logger.debug("Watchdog thread exiting.")
 
     watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
     watchdog_thread.start()
 
-    try:
-        if process.stdout:
+    def _read_stdout() -> None:
+        if not process.stdout:
+            return
+        try:
             for line in process.stdout:
                 if is_debug:
                     sys.stdout.write(line)
                     sys.stdout.flush()
                 lines.append(line.rstrip("\r\n"))
+        except (OSError, ValueError) as err:
+            logger.debug("Exception while reading process stdout: %s", err)
+
+    reader_thread = threading.Thread(target=_read_stdout, daemon=True)
+    reader_thread.start()
+
+    try:
+        while reader_thread.is_alive() and not timed_out:
+            reader_thread.join(timeout=0.5)
+            if process.poll() is not None and not reader_thread.is_alive():
+                break
     except Exception:
         logger.exception("Error while reading emulator output")
-        process.kill()
+        _kill_process_tree(process)
         raise
     finally:
         stop_watchdog.set()
         watchdog_thread.join(timeout=2.0)
-        process.wait()
+        if timed_out:
+            _kill_process_tree(process)
+        try:
+            process.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            logger.warning("Process did not exit after wait timeout, forcibly killing process tree...")
+            _kill_process_tree(process)
+            with contextlib.suppress(Exception):
+                process.wait(timeout=2.0)
+
+        reader_thread.join(timeout=2.0)
+        if process.stdout and not process.stdout.closed:
+            with contextlib.suppress(Exception):
+                process.stdout.close()
 
     retcode = _TIMEOUT_STATUS if timed_out else process.returncode
 
